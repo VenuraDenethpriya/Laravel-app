@@ -32,7 +32,7 @@ services:
         networks:
             - app-network
 
-    cerbot:
+    certbot:
         image: certbot/certbot:latest
         container_name: certbot
         restart: unless-stopped
