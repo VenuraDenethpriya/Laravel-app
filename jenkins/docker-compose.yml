@@ -1,0 +1,41 @@
+## Jenkins stack — runs alongside the main app stack and joins its network
+## so the main nginx can reverse-proxy `jenkins.devopstrainer.cloud` to the
+## Jenkins container directly. No second nginx, no second certbot.
+##
+## Run with:
+##   docker compose -f jenkins/docker-compose.yml up -d --build
+
+services:
+    jenkins:
+        build:
+            context: .
+            dockerfile: Dockerfile
+            args:
+                DOCKER_GID: "999"
+        container_name: jenkins
+        restart: unless-stopped
+        environment:
+            JENKINS_OPTS: "--prefix=/"
+            JAVA_OPTS: "-Djenkins.install.runSetupWizard=true"
+        volumes:
+            - jenkins-data:/var/jenkins_home
+            - /var/run/docker.sock:/var/run/docker.sock
+            # The pipeline's Deploy stage does
+            #   `cd /home/ubuntu/devops-practical && git pull && docker compose ...`
+            # so mount the deployed app at the same path inside the container.
+            - /home/ubuntu/devops-practical:/home/ubuntu/laravel-app
+        expose:
+            - "8080"
+        networks:
+            - default
+
+volumes:
+    jenkins-data:
+
+# Join the main app's docker network (created by the root docker-compose.yml
+# under the project name `devops-practical`). The main nginx lives there and
+# will resolve `jenkins:8080` once this container joins.
+networks:
+    default:
+        name: laravel-app_network
+        external: true
